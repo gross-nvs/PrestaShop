@@ -16,7 +16,9 @@ use Exception;
 use Mail;
 use Pack;
 use PrestaShop\PrestaShop\Adapter\LegacyContext as ContextAdapter;
+use PrestaShop\PrestaShop\Adapter\Product\PackItemsManagerInterface;
 use PrestaShop\PrestaShop\Adapter\ServiceLocator;
+use PrestaShop\PrestaShop\Adapter\StockManagerInterface;
 use PrestaShop\PrestaShop\Adapter\SymfonyContainer;
 use PrestaShopBundle\Entity\StockMvt;
 use PrestaShopException;
@@ -28,6 +30,12 @@ use StockAvailable;
  */
 class StockManager
 {
+    public function __construct(
+        private readonly StockManagerInterface $stockManager,
+        private readonly PackItemsManagerInterface $packItemsManager,
+    ) {
+    }
+
     /**
      * This will update a Pack quantity and will decrease the quantity of containing Products if needed.
      *
@@ -47,13 +55,11 @@ class StockManager
             || ($product->pack_stock_type == Pack::STOCK_TYPE_DEFAULT
                 && $configuration->get('PS_PACK_STOCK_TYPE') > 0)
         ) {
-            $packItemsManager = $serviceLocator::get('\\PrestaShop\\PrestaShop\\Adapter\\Product\\PackItemsManager');
-            $stockManager = $serviceLocator::get('\\PrestaShop\\PrestaShop\\Adapter\\StockManager');
             $cacheManager = $serviceLocator::get('\\PrestaShop\\PrestaShop\\Adapter\\CacheManager');
 
-            $products_pack = $packItemsManager->getPackItems($product);
+            $products_pack = $this->packItemsManager->getPackItems($product);
             foreach ($products_pack as $product_pack) {
-                $productStockAvailable = $stockManager->getStockAvailableByProduct($product_pack, $product_pack->id_pack_product_attribute, $id_shop);
+                $productStockAvailable = $this->stockManager->getStockAvailableByProduct($product_pack, $product_pack->id_pack_product_attribute, $id_shop);
                 $productStockAvailable->quantity = $productStockAvailable->quantity + ($delta_quantity * $product_pack->pack_quantity);
                 $productStockAvailable->update();
 
@@ -90,11 +96,9 @@ class StockManager
         $serviceLocator = new ServiceLocator();
 
         $configuration = $serviceLocator::get('\\PrestaShop\\PrestaShop\\Core\\ConfigurationInterface');
-        $packItemsManager = $serviceLocator::get('\\PrestaShop\\PrestaShop\\Adapter\\Product\\PackItemsManager');
-        $stockManager = $serviceLocator::get('\\PrestaShop\\PrestaShop\\Adapter\\StockManager');
         $cacheManager = $serviceLocator::get('\\PrestaShop\\PrestaShop\\Adapter\\CacheManager');
 
-        $packs = $packItemsManager->getPacksContainingItem($product, $id_product_attribute);
+        $packs = $this->packItemsManager->getPacksContainingItem($product, $id_product_attribute);
         foreach ($packs as $pack) {
             // Decrease stocks of the pack only if pack is in linked stock mode (option called 'Decrement both')
             if (!((int) $pack->pack_stock_type == Pack::STOCK_TYPE_PACK_BOTH)
@@ -110,7 +114,7 @@ class StockManager
             $quantity_by_pack = $pack->pack_item_quantity;
             $max_pack_quantity = max([0, floor($stock_available->quantity / $quantity_by_pack)]);
 
-            $stock_available_pack = $stockManager->getStockAvailableByProduct($pack, null, $id_shop);
+            $stock_available_pack = $this->stockManager->getStockAvailableByProduct($pack, null, $id_shop);
             if ($stock_available_pack->quantity > $max_pack_quantity) {
                 $stock_available_pack->quantity = $max_pack_quantity;
                 $stock_available_pack->update();
@@ -135,15 +139,13 @@ class StockManager
     {
         /** @TODO We should call the needed classes with the Symfony dependency injection instead of the Homemade Service Locator */
         $serviceLocator = new ServiceLocator();
-        $stockManager = $serviceLocator::get('\\PrestaShop\\PrestaShop\\Adapter\\StockManager');
-        $packItemsManager = $serviceLocator::get('\\PrestaShop\\PrestaShop\\Adapter\\Product\\PackItemsManager');
         $cacheManager = $serviceLocator::get('\\PrestaShop\\PrestaShop\\Adapter\\CacheManager');
         $hookManager = $serviceLocator::get('\\PrestaShop\\PrestaShop\\Adapter\\HookManager');
 
-        $stockAvailable = $stockManager->getStockAvailableByProduct($product, $id_product_attribute, $id_shop);
+        $stockAvailable = $this->stockManager->getStockAvailableByProduct($product, $id_product_attribute, $id_shop);
 
         // Update quantity of the pack products
-        if ($packItemsManager->isPack($product)) {
+        if ($this->packItemsManager->isPack($product)) {
             // The product is a pack
             $this->updatePackQuantity($product, $stockAvailable, $delta_quantity, $id_shop);
         } else {
@@ -154,7 +156,7 @@ class StockManager
             // Decrease case only: the stock of linked packs should be decreased too.
             if ($delta_quantity < 0) {
                 // The product is not a pack, but the product combination is part of a pack (use of isPacked, not isPack)
-                if ($packItemsManager->isPacked($product, $id_product_attribute)) {
+                if ($this->packItemsManager->isPacked($product, $id_product_attribute)) {
                     $this->updatePacksQuantityContainingProduct($product, $id_product_attribute, $stockAvailable, $id_shop);
                 }
             }
@@ -366,8 +368,7 @@ class StockManager
         $product = new Product($productId);
 
         if ($product->id) {
-            $stockManager = ServiceLocator::get('\\PrestaShop\\PrestaShop\\Adapter\\StockManager');
-            $stockAvailable = $stockManager->getStockAvailableByProduct($product, $productAttributeId, $params['id_shop'] ?? null);
+            $stockAvailable = $this->stockManager->getStockAvailableByProduct($product, $productAttributeId, $params['id_shop'] ?? null);
 
             if ($stockAvailable->id) {
                 $stockMvt = new StockMvt();

@@ -55,13 +55,14 @@ services:
   prestashop.core.api.stock.repository:
     class: PrestaShopBundle\Entity\Repository\StockRepository
     arguments:
-      - "@service_container"
-      - "@doctrine.dbal.default_connection"
-      - "@doctrine.orm.default_entity_manager"
-      - "@prestashop.adapter.legacy.context"
+      - '@service_container'
+      - '@doctrine.dbal.default_connection'
+      - '@doctrine.orm.default_entity_manager'
+      - '@prestashop.adapter.legacy.context'
       - '@PrestaShop\PrestaShop\Adapter\ImageManager'
-      - "@prestashop.adapter.stock_manager"
-      - "%database_prefix%"
+      - '@prestashop.adapter.stock_manager'
+      - '@PrestaShop\PrestaShop\Core\Stock\StockManager'
+      - '%database_prefix%'
 
   prestashop.core.api.stock_movement.repository:
     class: PrestaShopBundle\Entity\Repository\StockMovementRepository

@@ -15,20 +15,14 @@ use StockAvailable;
  *
  * This class will provide data from DB / ORM about Product stocks.
  */
-class StockManager
+class StockManager implements StockManagerInterface
 {
     private $cachedStockContext = [];
 
     /**
-     * Gets available stock for a given product / combination / shop.
-     *
-     * @param object $product
-     * @param int|null $id_product_attribute
-     * @param int|null $id_shop
-     *
-     * @return StockAvailable
+     * @inheritDoc
      */
-    public function getStockAvailableByProduct($product, $id_product_attribute = null, $id_shop = null)
+    public function getStockAvailableByProduct($product, ?int $id_product_attribute = null, ?int $id_shop = null): StockAvailable
     {
         $stockAvailable = $this->newStockAvailable($this->getStockAvailableIdByProductId($product->id, $id_product_attribute, $id_shop));
 
@@ -61,13 +55,9 @@ class StockManager
     }
 
     /**
-     * Returns True if Stocks are managed by a module (or by legacy ASM).
-     *
-     * @return bool True if Stocks are managed by a module (or by legacy ASM)
-     *
-     * @deprecated Since 9.0 and will be removed in 10.0
+     * @inheritDoc
      */
-    public function isAsmGloballyActivated()
+    public function isAsmGloballyActivated(): bool
     {
         @trigger_error(sprintf(
             '%s is deprecated since 9.0 and will be removed in 10.0.',
@@ -78,15 +68,9 @@ class StockManager
     }
 
     /**
-     * @param int $shopId
-     * @param int $errorState
-     * @param int $cancellationState
-     * @param int|null $idProduct
-     * @param int|null $idOrder
-     *
-     * @return bool
+     * @inheritDoc
      */
-    public function updatePhysicalProductQuantity($shopId, $errorState, $cancellationState, $idProduct = null, $idOrder = null)
+    public function updatePhysicalProductQuantity(int $shopId, int $errorState, int $cancellationState, ?int $idProduct = null, ?int $idOrder = null): bool
     {
         $this->updateReservedProductQuantity($shopId, $errorState, $cancellationState, $idProduct, $idOrder);
 
@@ -120,15 +104,9 @@ class StockManager
     }
 
     /**
-     * @param int $shopId
-     * @param int $errorState
-     * @param int $cancellationState
-     * @param int|null $idProduct
-     * @param int|null $idOrder
-     *
-     * @return bool
+     * @inheritDoc
      */
-    private function updateReservedProductQuantity($shopId, $errorState, $cancellationState, $idProduct = null, $idOrder = null)
+    private function updateReservedProductQuantity(int $shopId, int $errorState, int $cancellationState, ?int $idProduct = null, ?int $idOrder = null): bool
     {
         $updateReservedQuantityQuery = 'UPDATE {table_prefix}stock_available sa';
 
@@ -221,13 +199,9 @@ class StockManager
     }
 
     /**
-     * Instance a new StockAvailable.
-     *
-     * @param bool|int|null $stockAvailableId
-     *
-     * @return StockAvailable
+     * @inheritDoc
      */
-    public function newStockAvailable($stockAvailableId = null)
+    public function newStockAvailable(bool|int|null $stockAvailableId = null): StockAvailable
     {
         if (is_int($stockAvailableId)) {
             return new StockAvailable($stockAvailableId);
@@ -237,28 +211,17 @@ class StockManager
     }
 
     /**
-     * Use legacy getStockAvailableIdByProductId.
-     *
-     * @param int $productId
-     * @param int|null $productAttributeId
-     * @param int|null $shopId
-     *
-     * @return bool|int
+     * @inheritDoc
      */
-    public function getStockAvailableIdByProductId($productId, $productAttributeId = null, $shopId = null)
+    public function getStockAvailableIdByProductId(int $productId, ?int $productAttributeId = null, ?int $shopId = null): bool|int
     {
         return StockAvailable::getStockAvailableIdByProductId($productId, $productAttributeId, $shopId);
     }
 
     /**
-     * For a given product, get its "out of stock" flag.
-     *
-     * @param int $productId
-     * @param int $shopId Optional : gets context if null @see Context::getContext()
-     *
-     * @return bool True if product is orderable when out of stock
+     * @inheritDoc
      */
-    public function outOfStock($productId, $shopId = null)
+    public function outOfStock(int $productId, ?int $shopId = null): bool
     {
         return StockAvailable::outOfStock($productId, $shopId);
     }

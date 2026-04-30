@@ -3,6 +3,8 @@
  * For the full copyright and license information, please view the
  * docs/licenses/LICENSE.txt file that was distributed with this source code.
  */
+
+use PrestaShop\PrestaShop\Adapter\ContainerFinder;
 use PrestaShop\PrestaShop\Adapter\MailTemplate\MailPartialTemplateRenderer;
 use PrestaShop\PrestaShop\Adapter\StockManager as StockManagerAdapter;
 use PrestaShop\PrestaShop\Core\Stock\StockManager;
@@ -238,7 +240,9 @@ class OrderHistoryCore extends ObjectModel
                             $current_shop_group_id = Context::getContext()->shop->getContextShopGroupID();
                             Context::getContext()->shop->setContext(Shop::CONTEXT_SHOP, $order->id_shop);
                         }
-                        (new StockManager())->saveMovement(
+                        (new ContainerFinder($context))->getContainer()
+                            ->get(StockManager::class)
+                            ->saveMovement(
                             (int) $product['product_id'],
                             (int) $product['product_attribute_id'],
                             (int) $product_quantity * ($new_os->shipped == 1 ? -1 : 1),

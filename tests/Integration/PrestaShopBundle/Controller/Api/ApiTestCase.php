@@ -39,6 +39,11 @@ abstract class ApiTestCase extends WebTestCase
     {
         parent::setUp();
         self::$kernel = static::bootKernel();
+
+        // Global var for SymfonyContainer
+        global $kernel;
+        $kernel = self::$kernel;
+
         self::$client = self::$kernel->getContainer()->get('test.client');
         $this->loginUser(self::$client);
         self::$client->setServerParameters([]);

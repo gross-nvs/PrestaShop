@@ -41,6 +41,10 @@ class StockManagerTest extends KernelTestCase
     public function setUp(): void
     {
         parent::setUp();
+        self::bootKernel();
+        // Global var for SymfonyContainer
+        global $kernel;
+        $kernel = self::$kernel;
 
         $this->configuration = $this->createMock(ConfigurationInterface::class);
         $this->savedContainer = ServiceLocator::getContainer();
@@ -170,7 +174,7 @@ class StockManagerTest extends KernelTestCase
         $this->testContainer->bind('\\PrestaShop\\PrestaShop\\Adapter\\Product\\PackItemsManager', $this->packItemsManager);
         $this->testContainer->bind('\\PrestaShop\\PrestaShop\\Adapter\\StockManager', $this->packItemsManager);
 
-        $stockManager = new StockManager();
+        $stockManager = self::$kernel->getContainer()->get(StockManager::class);
         // we will update first product quantity only, others will remain inchanged (excepting pack on needed cases)
         $stockAvailable = $products[0][0]->stock_available;
         $stockAvailable->quantity = $stockAvailable->quantity + $delta;
@@ -271,7 +275,7 @@ class StockManagerTest extends KernelTestCase
         $productToUpdate = ($product_to_update === 0) ? $pack : $products[$product_to_update - 1][0];
         $productAttributeToUpdate = ($product_to_update === 0) ? null : $products[$product_to_update - 1][1];
 
-        $stockManager = new StockManager();
+        $stockManager = self::$kernel->getContainer()->get(StockManager::class);
         $stockManager->updateQuantity($productToUpdate, $productAttributeToUpdate, $delta);
 
         $this->assertEquals($expected[0], $pack->stock_available->quantity);

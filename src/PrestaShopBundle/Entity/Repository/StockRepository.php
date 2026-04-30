@@ -25,30 +25,17 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 class StockRepository extends StockManagementRepository
 {
     /**
-     * @var StockManager
+     * @var array<string, int>
      */
-    private $stockManager;
+    private array $orderStates = [];
 
     /**
-     * @var array
+     * @var array<int, int>
      */
-    private $orderStates = [];
-
-    /**
-     * @var array
-     */
-    private $totalCombinations = [];
+    private array $totalCombinations = [];
 
     /**
      * StockRepository constructor.
-     *
-     * @param ContainerInterface $container
-     * @param Connection $connection
-     * @param EntityManager $entityManager
-     * @param ContextAdapter $contextAdapter
-     * @param ImageManager $imageManager
-     * @param StockManager $stockManager
-     * @param string $tablePrefix
      */
     public function __construct(
         ContainerInterface $container,
@@ -56,8 +43,9 @@ class StockRepository extends StockManagementRepository
         EntityManager $entityManager,
         ContextAdapter $contextAdapter,
         ImageManager $imageManager,
-        StockManager $stockManager,
-        $tablePrefix
+        private readonly StockManager $stockManager,
+        private readonly StockManagerCore $stockManagerCore,
+        string $tablePrefix,
     ) {
         parent::__construct(
             $container,
@@ -68,19 +56,12 @@ class StockRepository extends StockManagementRepository
             $tablePrefix
         );
 
-        $this->stockManager = $stockManager;
-
         $configuration = new Configuration();
         $this->orderStates['error'] = (int) $configuration->get('PS_OS_ERROR');
         $this->orderStates['cancellation'] = (int) $configuration->get('PS_OS_CANCELED');
     }
 
-    /**
-     * @param MovementsCollection $movements
-     *
-     * @return array
-     */
-    public function bulkUpdateStock(MovementsCollection $movements)
+    public function bulkUpdateStock(MovementsCollection $movements): array
     {
         $products = $movements->map(function (Movement $movement) {
             return $this->updateStock($movement);
@@ -89,13 +70,7 @@ class StockRepository extends StockManagementRepository
         return $products;
     }
 
-    /**
-     * @param Movement $movement
-     * @param bool $syncStock
-     *
-     * @return mixed
-     */
-    public function updateStock(Movement $movement, $syncStock = true)
+    public function updateStock(Movement $movement, bool $syncStock = true): mixed
     {
         $productIdentity = $movement->getProductIdentity();
         $delta = $movement->getDelta();
@@ -106,7 +81,7 @@ class StockRepository extends StockManagementRepository
             if ($product->id) {
                 $configurationAdapter = new Configuration();
 
-                (new StockManagerCore())->updateQuantity(
+                $this->stockManagerCore->updateQuantity(
                     $product,
                     $productIdentity->getCombinationId(),
                     $delta,
@@ -129,7 +104,7 @@ class StockRepository extends StockManagementRepository
     /**
      * Sync all stock with Manager.
      */
-    private function syncAllStock($idProduct)
+    private function syncAllStock($idProduct): void
     {
         (new StockManager())->updatePhysicalProductQuantity(
             $this->getCurrentShop()->id,
@@ -139,12 +114,7 @@ class StockRepository extends StockManagementRepository
         );
     }
 
-    /**
-     * @param ProductIdentity $productIdentity
-     *
-     * @return mixed
-     */
-    private function selectStockBy(ProductIdentity $productIdentity)
+    private function selectStockBy(ProductIdentity $productIdentity): mixed
     {
         $andWhereClause = '
             AND p.id_product = :product_id
@@ -168,12 +138,7 @@ class StockRepository extends StockManagementRepository
         return $this->castNumericToInt($rows)[0];
     }
 
-    /**
-     * @param QueryParamsCollection $queryParams
-     *
-     * @return mixed
-     */
-    public function getData(QueryParamsCollection $queryParams)
+    public function getData(QueryParamsCollection $queryParams): mixed
     {
         $this->stockManager->updatePhysicalProductQuantity(
             $this->getContextualShopId(),
@@ -184,14 +149,7 @@ class StockRepository extends StockManagementRepository
         return parent::getData($queryParams);
     }
 
-    /**
-     * @param int $offset
-     * @param int $limit
-     * @param QueryParamsCollection $queryParams
-     *
-     * @return array
-     */
-    public function getDataExport($offset, $limit, QueryParamsCollection $queryParams)
+    public function getDataExport(int $offset, int $limit, QueryParamsCollection $queryParams): array
     {
         $queryParams->setPageIndex($offset);
         $queryParams->setPageSize($limit);
@@ -202,7 +160,7 @@ class StockRepository extends StockManagementRepository
     /**
      * @param string $andWhereClause
      * @param string $having
-     * @param null $orderByClause
+     * @param ?string $orderByClause
      *
      * @return mixed
      */
@@ -288,30 +246,17 @@ class StockRepository extends StockManagementRepository
         );
     }
 
-    /**
-     * @param QueryParamsCollection $queryParams
-     *
-     * @return string
-     */
-    protected function andWhere(QueryParamsCollection $queryParams)
+    protected function andWhere(QueryParamsCollection $queryParams): string
     {
         return parent::andWhere($queryParams);
     }
 
-    /**
-     * @return string
-     */
-    private function orderByProductIds()
+    private function orderByProductIds(): string
     {
         return 'ORDER BY p.id_product DESC, COALESCE(pa.id_product_attribute, 0) DESC';
     }
 
-    /**
-     * @param array $rows
-     *
-     * @return array
-     */
-    protected function addAdditionalData(array $rows)
+    protected function addAdditionalData(array $rows): array
     {
         $rows = parent::addAdditionalData($rows);
         $rows = $this->addStockApiUrls($rows);
@@ -319,7 +264,7 @@ class StockRepository extends StockManagementRepository
         return $rows;
     }
 
-    protected function addCombinationsAndFeatures(array $rows)
+    protected function addCombinationsAndFeatures(array $rows): array
     {
         $rows = parent::addCombinationsAndFeatures($rows);
         foreach ($rows as &$row) {
@@ -335,12 +280,8 @@ class StockRepository extends StockManagementRepository
 
     /**
      * Compute the number of combinations associated with a product.
-     *
-     * @param array $row
-     *
-     * @return string
      */
-    private function getTotalCombinations(array $row)
+    private function getTotalCombinations(array $row): int
     {
         if (!isset($this->totalCombinations[$row['product_id']])) {
             $query = 'SELECT COUNT(*) total_combinations
@@ -356,7 +297,7 @@ class StockRepository extends StockManagementRepository
         return $this->totalCombinations[$row['product_id']];
     }
 
-    private function addStockApiUrls(array $rows)
+    private function addStockApiUrls(array $rows): array
     {
         $router = $this->container->get('router');
 

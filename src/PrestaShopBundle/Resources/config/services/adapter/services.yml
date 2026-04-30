@@ -90,10 +90,11 @@ services:
     tags:
       - { name: core.legacy.hook.subscriber }
 
-  prestashop.adapter.stock_manager:
-    class: PrestaShop\PrestaShop\Adapter\StockManager
-    decorates: prestashop.core.data_provider.stock_interface
+  PrestaShop\PrestaShop\Adapter\StockManager:
     public: false
+
+  prestashop.adapter.stock_manager:
+    alias: PrestaShop\PrestaShop\Adapter\StockManager
 
   prestashop.adapter.formatter.price:
     class: PrestaShop\PrestaShop\Adapter\Product\PriceFormatter

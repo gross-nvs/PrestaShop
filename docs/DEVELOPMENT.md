@@ -78,7 +78,7 @@ make help # Show all available commands
 | `make docker-restart` | Restart the docker hub |
 | `make docker-down` | Stop and remove containers |
 | `make docker-logs` | Show live container logs |
-| `make docker-bash` | Connect to PHP container via bash |
+| `make docker-sh` | Connect to PHP container via bash |
 
 ### Asset Management
 

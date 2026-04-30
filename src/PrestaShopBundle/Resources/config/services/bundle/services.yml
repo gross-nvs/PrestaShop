@@ -53,10 +53,6 @@ services:
       container: "@service_container"
       validator: "@prestashop.core.validation.validator"
 
-  # Interfaced services to decorate
-  prestashop.core.data_provider.stock_interface:
-    class: PrestaShopBundle\Service\DataProvider\StockInterface
-
   # DISPATCHERS
   prestashop.hook.dispatcher:
     class: PrestaShop\PrestaShop\Adapter\Hook\HookDispatcher
