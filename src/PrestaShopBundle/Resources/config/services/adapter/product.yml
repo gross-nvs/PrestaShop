@@ -311,3 +311,10 @@ services:
   PrestaShop\PrestaShop\Adapter\Product\ProductDeleter:
     autowire: true
     public: false
+
+  PrestaShop\PrestaShop\Adapter\Product\PackItemsManagerInterface: '@PrestaShop\PrestaShop\Adapter\Product\PackItemsManager'
+
+  PrestaShop\PrestaShop\Adapter\Product\PackItemsManager:
+    public: false
+    arguments:
+      - '@=service("PrestaShop\\PrestaShop\\Core\\ConfigurationInterface").get("PS_LANG_DEFAULT")'

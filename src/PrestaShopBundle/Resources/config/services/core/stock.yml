@@ -1,7 +1,10 @@
 services:
   _defaults:
     public: true
+    autowire: true
+    autoconfigure: true
 
   PrestaShop\PrestaShop\Core\Stock\StockManager:
     arguments:
       $stockManager: '@PrestaShop\PrestaShop\Adapter\StockManager'
+      $stockManagementRepository: '@prestashop.core.api.stock_movement.repository'

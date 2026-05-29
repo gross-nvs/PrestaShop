@@ -243,14 +243,14 @@ class OrderHistoryCore extends ObjectModel
                         (new ContainerFinder($context))->getContainer()
                             ->get(StockManager::class)
                             ->saveMovement(
-                            (int) $product['product_id'],
-                            (int) $product['product_attribute_id'],
-                            (int) $product_quantity * ($new_os->shipped == 1 ? -1 : 1),
-                            [
-                                'id_order' => $order->id,
-                                'id_stock_mvt_reason' => ($new_os->shipped == 1 ? Configuration::get('PS_STOCK_CUSTOMER_ORDER_REASON') : Configuration::get('PS_STOCK_CUSTOMER_ORDER_CANCEL_REASON')),
-                            ]
-                        );
+                                (int) $product['product_id'],
+                                (int) $product['product_attribute_id'],
+                                (int) $product_quantity * ($new_os->shipped == 1 ? -1 : 1),
+                                [
+                                    'id_order' => $order->id,
+                                    'id_stock_mvt_reason' => ($new_os->shipped == 1 ? Configuration::get('PS_STOCK_CUSTOMER_ORDER_REASON') : Configuration::get('PS_STOCK_CUSTOMER_ORDER_CANCEL_REASON')),
+                                ]
+                            );
                         // back to current shop context
                         if ($current_shop_context_type !== Shop::CONTEXT_SHOP && isset($current_shop_group_id)) {
                             Context::getContext()->shop->setContext($current_shop_context_type, $current_shop_group_id);

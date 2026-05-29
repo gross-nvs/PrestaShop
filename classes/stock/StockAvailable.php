@@ -362,7 +362,7 @@ class StockAvailableCore extends ObjectModel
             return false;
         }
 
-        $stockManager = (new ContainerFinder(Context::getContext()))->getContainer()->get(\PrestaShop\PrestaShop\Core\Stock\StockManager::class);
+        $stockManager = (new ContainerFinder(Context::getContext()))->getContainer()->get(PrestaShop\PrestaShop\Core\Stock\StockManager::class);
         $stockManager->updateQuantity($product, $id_product_attribute, $delta_quantity, $id_shop, $add_movement, $params);
 
         return true;
@@ -391,7 +391,7 @@ class StockAvailableCore extends ObjectModel
         }
 
         // Try to set available quantity if product does not depend on physical stock
-        $stockManager = (new ContainerFinder($context))->getContainer()->get(\PrestaShop\PrestaShop\Core\Stock\StockManager::class);
+        $stockManager = (new ContainerFinder($context))->getContainer()->get(PrestaShop\PrestaShop\Core\Stock\StockManager::class);
 
         $id_stock_available = (int) StockAvailable::getStockAvailableIdByProductId($id_product, $id_product_attribute, $id_shop);
         if ($id_stock_available) {

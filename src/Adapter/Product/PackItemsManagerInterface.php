@@ -22,6 +22,7 @@ interface PackItemsManagerInterface
 
     /**
      * Get all Packs that contains the given item in the corresponding combination.
+     *
      * @param bool|int $id_lang Optional
      *
      * @return Pack[] The packs that contains the given item, with special dynamic attribute [pack_item_quantity]

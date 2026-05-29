@@ -2,6 +2,8 @@ services:
   _defaults:
     public: true
 
+  PrestaShop\PrestaShop\Adapter\CacheManager: ~
+
   PrestaShop\PrestaShop\Adapter\Configuration: ~
 
   prestashop.adapter.legacy.configuration:

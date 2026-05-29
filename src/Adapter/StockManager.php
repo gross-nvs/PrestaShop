@@ -20,7 +20,7 @@ class StockManager implements StockManagerInterface
     private $cachedStockContext = [];
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function getStockAvailableByProduct($product, ?int $id_product_attribute = null, ?int $id_shop = null): StockAvailable
     {
@@ -55,7 +55,7 @@ class StockManager implements StockManagerInterface
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function isAsmGloballyActivated(): bool
     {
@@ -68,7 +68,7 @@ class StockManager implements StockManagerInterface
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function updatePhysicalProductQuantity(int $shopId, int $errorState, int $cancellationState, ?int $idProduct = null, ?int $idOrder = null): bool
     {
@@ -104,7 +104,7 @@ class StockManager implements StockManagerInterface
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     private function updateReservedProductQuantity(int $shopId, int $errorState, int $cancellationState, ?int $idProduct = null, ?int $idOrder = null): bool
     {
@@ -199,7 +199,7 @@ class StockManager implements StockManagerInterface
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function newStockAvailable(bool|int|null $stockAvailableId = null): StockAvailable
     {
@@ -211,7 +211,7 @@ class StockManager implements StockManagerInterface
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function getStockAvailableIdByProductId(int $productId, ?int $productAttributeId = null, ?int $shopId = null): bool|int
     {
@@ -219,7 +219,7 @@ class StockManager implements StockManagerInterface
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function outOfStock(int $productId, ?int $shopId = null): bool
     {
