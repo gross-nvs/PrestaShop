@@ -8,13 +8,18 @@ declare(strict_types=1);
 
 namespace Tests\Integration\Core\Stock;
 
+use Pack;
 use PHPUnit\Framework\MockObject\MockObject;
+use PrestaShop\PrestaShop\Adapter\CacheManager;
+use PrestaShop\PrestaShop\Adapter\HookManager;
 use PrestaShop\PrestaShop\Adapter\Product\PackItemsManager;
 use PrestaShop\PrestaShop\Adapter\ServiceLocator;
+use PrestaShop\PrestaShop\Adapter\StockManagerInterface;
 use PrestaShop\PrestaShop\Core\ConfigurationInterface;
 use PrestaShop\PrestaShop\Core\Domain\Product\Pack\ValueObject\PackStockType;
 use PrestaShop\PrestaShop\Core\Foundation\IoC\Container;
 use PrestaShop\PrestaShop\Core\Stock\StockManager;
+use PrestaShopBundle\Entity\Repository\StockMovementRepository;
 use Product;
 use StockAvailable;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -64,6 +69,22 @@ class StockManagerTest extends KernelTestCase
     }
 
     /**
+     * FakePackItemsManager4759 implements both PackItemsManagerInterface and StockManagerInterface
+     * so the same instance is passed for both roles, keeping in-memory state consistent across calls.
+     */
+    private function createStockManagerWithFake(FakePackItemsManager4759 $fake): StockManager
+    {
+        return new StockManager(
+            $fake,
+            $fake,
+            $this->configuration,
+            $this->createMock(CacheManager::class),
+            $this->createMock(HookManager::class),
+            $this->createMock(StockMovementRepository::class),
+        );
+    }
+
+    /**
      * @dataProvider dataProviderUpdatePackQuantity
      */
     public function testUpdatePackQuantity(
@@ -78,10 +99,7 @@ class StockManagerTest extends KernelTestCase
         foreach ($products as $product) {
             $packItemsManager->addProduct($pack, $product[0], $product[1], $product[2]);
         }
-        $this->testContainer->bind('\\PrestaShop\\PrestaShop\\Adapter\\Product\\PackItemsManager', $packItemsManager);
-        $this->testContainer->bind('\\PrestaShop\\PrestaShop\\Adapter\\StockManager', $packItemsManager);
-
-        $stockManager = new StockManager();
+        $stockManager = $this->createStockManagerWithFake($packItemsManager);
         $stockManager->updatePackQuantity($pack, $pack->stock_available, $delta);
 
         $this->assertEquals($expected[0], $pack->stock_available->quantity);
@@ -171,10 +189,7 @@ class StockManagerTest extends KernelTestCase
         foreach ($products as $product) {
             $this->packItemsManager->addProduct($pack, $product[0], $product[1], $product[2]);
         }
-        $this->testContainer->bind('\\PrestaShop\\PrestaShop\\Adapter\\Product\\PackItemsManager', $this->packItemsManager);
-        $this->testContainer->bind('\\PrestaShop\\PrestaShop\\Adapter\\StockManager', $this->packItemsManager);
-
-        $stockManager = self::$kernel->getContainer()->get(StockManager::class);
+        $stockManager = $this->createStockManagerWithFake($this->packItemsManager);
         // we will update first product quantity only, others will remain inchanged (excepting pack on needed cases)
         $stockAvailable = $products[0][0]->stock_available;
         $stockAvailable->quantity = $stockAvailable->quantity + $delta;
@@ -269,13 +284,10 @@ class StockManagerTest extends KernelTestCase
         foreach ($products as $product) {
             $this->packItemsManager->addProduct($pack, $product[0], $product[1], $product[2]);
         }
-        $this->testContainer->bind('\\PrestaShop\\PrestaShop\\Adapter\\Product\\PackItemsManager', $this->packItemsManager);
-        $this->testContainer->bind('\\PrestaShop\\PrestaShop\\Adapter\\StockManager', $this->packItemsManager);
-
         $productToUpdate = ($product_to_update === 0) ? $pack : $products[$product_to_update - 1][0];
         $productAttributeToUpdate = ($product_to_update === 0) ? null : $products[$product_to_update - 1][1];
 
-        $stockManager = self::$kernel->getContainer()->get(StockManager::class);
+        $stockManager = $this->createStockManagerWithFake($this->packItemsManager);
         $stockManager->updateQuantity($productToUpdate, $productAttributeToUpdate, $delta);
 
         $this->assertEquals($expected[0], $pack->stock_available->quantity);
@@ -391,57 +403,80 @@ class FakeProduct4759 extends Product
     }
 }
 
-class FakePackItemsManager4759 extends PackItemsManager
+class FakePackItemsManager4759 extends PackItemsManager implements StockManagerInterface
 {
     private $packs = [];
     private $items = [];
     private $stockAvailables = [];
 
+    public function __construct()
+    {
+        parent::__construct(1);
+    }
+
     public function addProduct(FakeProduct4759 $pack, FakeProduct4759 $product, $product_attribute_id, $quantity)
     {
-        $entry = [
-            'productObj' => $product,
-            'id' => $product->id,
-            'id_pack_product_attribute' => $product_attribute_id,
-            'pack_quantity' => $quantity,
-        ];
-        $this->packs[$pack->id][] = (object) $entry;
-        $entry = [
-            'packObj' => $pack,
-            'id' => $pack->id,
-            'pack_item_quantity' => $quantity,
-            'pack_stock_type' => $pack->pack_stock_type,
-        ];
-        $this->items[$product->id][$product_attribute_id][$pack->id] = (object) $entry;
+        $productEntry = clone $product;
+        $productEntry->id_pack_product_attribute = $product_attribute_id;
+        $productEntry->pack_quantity = $quantity;
+        $this->packs[$pack->id][] = $productEntry;
+        $packEntry = clone $pack;
+        $packEntry->pack_item_quantity = $quantity;
+        $this->items[$product->id][$product_attribute_id][$pack->id] = $packEntry;
         $this->stockAvailables[$pack->id][0] = $pack->stock_available;
         $this->stockAvailables[$product->id][$product_attribute_id] = $product->stock_available;
     }
 
-    public function getPackItems($pack, $id_lang = false)
+    public function getPackItems(Product|Pack $pack, bool|int $id_lang = false): array
     {
         return $this->packs[$pack->id];
     }
 
-    public function getPacksContainingItem($item, $item_attribute_id, $id_lang = false)
+    public function getPacksContainingItem(Product $item, int $item_attribute_id, bool|int $id_lang = false): array
     {
         return $this->items[$item->id][$item_attribute_id];
     }
 
-    public function getStockAvailableByProduct($product, ?int $id_product_attribute = null, $id_shop = null)
+    public function getStockAvailableByProduct(Product $product, ?int $id_product_attribute = null, ?int $id_shop = null): StockAvailable
     {
         $id_product_attribute = $id_product_attribute ? $id_product_attribute : 0;
 
         return $this->stockAvailables[$product->id][$id_product_attribute];
     }
 
-    public function isPack($product)
+    public function isPack(Product $product): bool
     {
         return isset($this->packs[$product->id]);
     }
 
-    public function isPacked($product, $id_product_attribute = false)
+    public function isPacked(Product $product, int|bool $id_product_attribute = false): bool
     {
         return isset($this->items[$product->id][$id_product_attribute]);
+    }
+
+    public function isAsmGloballyActivated(): bool
+    {
+        return false;
+    }
+
+    public function updatePhysicalProductQuantity(int $shopId, int $errorState, int $cancellationState, ?int $idProduct = null, ?int $idOrder = null): bool
+    {
+        return true;
+    }
+
+    public function newStockAvailable(bool|int|null $stockAvailableId = null): StockAvailable
+    {
+        return new StockAvailable();
+    }
+
+    public function getStockAvailableIdByProductId(int $productId, ?int $productAttributeId = null, ?int $shopId = null): bool|int
+    {
+        return false;
+    }
+
+    public function outOfStock(int $productId, ?int $shopId = null): bool
+    {
+        return false;
     }
 }
 

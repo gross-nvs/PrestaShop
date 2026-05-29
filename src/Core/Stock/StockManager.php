@@ -21,7 +21,7 @@ use PrestaShop\PrestaShop\Adapter\LegacyContext as ContextAdapter;
 use PrestaShop\PrestaShop\Adapter\Product\PackItemsManagerInterface;
 use PrestaShop\PrestaShop\Adapter\StockManagerInterface;
 use PrestaShop\PrestaShop\Core\ConfigurationInterface;
-use PrestaShopBundle\Entity\Repository\StockManagementRepository;
+use PrestaShopBundle\Entity\Repository\StockMovementRepository;
 use PrestaShopBundle\Entity\StockMvt;
 use PrestaShopException;
 use Product;
@@ -38,7 +38,7 @@ class StockManager
         private readonly ConfigurationInterface $configuration,
         private readonly CacheManager $cacheManager,
         private readonly HookManager $hookManager,
-        private readonly StockManagementRepository $stockManagementRepository,
+        private readonly StockMovementRepository $stockManagementRepository,
     ) {
     }
 
@@ -145,7 +145,7 @@ class StockManager
             // Decrease case only: the stock of linked packs should be decreased too.
             if ($delta_quantity < 0) {
                 // The product is not a pack, but the product combination is part of a pack (use of isPacked, not isPack)
-                if ($this->packItemsManager->isPacked($product, $id_product_attribute)) {
+                if ($this->packItemsManager->isPacked($product, $id_product_attribute ?? false)) {
                     $this->updatePacksQuantityContainingProduct($product, $id_product_attribute, $stockAvailable, $id_shop);
                 }
             }
@@ -332,7 +332,7 @@ class StockManager
             return false;
         }
 
-        return $this->stockManagementRepository->saveStockMvt($stockMvt);
+        return (bool) $this->stockManagementRepository->saveStockMvt($stockMvt);
     }
 
     /**
